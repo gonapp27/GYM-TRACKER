@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gonzalo-gym-tracker-v5.0.0';
+const CACHE_NAME = 'gonzalo-gym-tracker-v5.1.0-visual';
 const APP_SHELL = [
   './',
   './index.html',

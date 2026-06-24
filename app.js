@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '5.0.0';
+  const APP_VERSION = '5.1.0';
   const DB_NAME = 'gonzaloGymTrackerV5DB';
   const STORE = 'kv';
   const STATE_KEY = 'state';
@@ -346,10 +346,10 @@
       <section class="card">
         <div class="row between">
           <div>
-            <p class="eyebrow">Hoy</p>
+            <p class="eyebrow">🏠 Hoy</p>
             <h2>${dateLabel(date)}</h2>
           </div>
-          <button class="btn secondary small-btn" data-action="go-backup">Backup</button>
+          <button class="btn secondary small-btn" data-action="go-backup">💾 Backup</button>
         </div>
         <div class="grid two">
           <div class="kpi"><strong>${fmt(totals.protein)} g</strong><span>Proteína / ${state.settings.proteinGoal} g</span><div class="progress-bar"><span style="width:${proteinPct}%"></span></div></div>
@@ -360,20 +360,20 @@
       </section>
 
       <section class="card">
-        <h3>Registro rápido</h3>
+        <h3>⚡ Registro rápido</h3>
         <div class="grid two">
           <label>Peso hoy (${state.settings.units})<input class="input" id="quickWeight" inputmode="decimal" value="${weight ? escapeHtml(weight.weight) : ''}" placeholder="Ej. 80.5"></label>
           <label>Nota peso<input class="input" id="quickWeightNote" value="${weight ? escapeHtml(weight.notes || '') : ''}" placeholder="Opcional"></label>
         </div>
         <div class="row wrap" style="margin-top:10px">
-          <button class="btn" data-action="save-weight">Guardar peso</button>
-          <button class="btn secondary" data-action="quick-meal-banana">Añadir plátano</button>
-          <button class="btn secondary" data-action="go-gym">Ir a Gym</button>
+          <button class="btn" data-action="save-weight">⚖️ Guardar peso</button>
+          <button class="btn secondary" data-action="quick-meal-banana">🍌 Añadir plátano</button>
+          <button class="btn secondary" data-action="go-gym">🏋️ Ir a Gym</button>
         </div>
       </section>
 
       <section class="card">
-        <h3>Checklist del día</h3>
+        <h3>✅ Checklist del día</h3>
         <div class="grid two">
           ${checklist.map(([key, label]) => `<label class="inline"><input type="checkbox" data-check="${key}" ${check[key] ? 'checked' : ''}> ${label}</label>`).join('')}
         </div>
@@ -381,7 +381,7 @@
       </section>
 
       <section class="card">
-        <h3>Comidas de hoy</h3>
+        <h3>🍽️ Comidas de hoy</h3>
         ${renderMealList(date)}
       </section>
     `;
@@ -462,10 +462,10 @@
       <section class="card">
         <div class="row between">
           <div>
-            <p class="eyebrow">Entrenamiento</p>
-            <h2>Gym</h2>
+            <p class="eyebrow">🏋️ Entrenamiento</p>
+            <h2>Gym de hoy</h2>
           </div>
-          <button class="btn secondary small-btn" data-action="copy-last">Copiar última</button>
+          <button class="btn secondary small-btn" data-action="copy-last">📋 Copiar última</button>
         </div>
         <div class="grid two">
           <label>Rutina<select id="routineSelect">${routineOptions}</select></label>
@@ -476,7 +476,7 @@
 
       <section class="card">
         <div class="timer">
-          <div class="muted bold">Temporizador descanso</div>
+          <div class="muted bold">⏱️ Temporizador descanso</div>
           <div class="timer-display" id="timerDisplay">${formatTimer(timerRemaining || state.settings.restSeconds)}</div>
           <div class="row wrap" style="justify-content:center">
             <button class="btn secondary small-btn" data-timer="60">60s</button>
@@ -490,8 +490,8 @@
 
       <section class="card">
         <div class="row between">
-          <h3>Ejercicios</h3>
-          <button class="btn secondary small-btn" data-action="add-exercise">+ Ejercicio</button>
+          <h3>💪 Ejercicios</h3>
+          <button class="btn secondary small-btn" data-action="add-exercise">➕ Ejercicio</button>
         </div>
         <div class="stack" id="exerciseList">
           ${currentGymDraft.exercises.map((ex, idx) => renderExerciseDraft(ex, idx)).join('')}
@@ -500,8 +500,8 @@
 
       <section class="card">
         <div class="row wrap">
-          <button class="btn success" data-action="save-session">Guardar entrenamiento</button>
-          <button class="btn secondary" data-action="new-draft">Nuevo borrador</button>
+          <button class="btn success" data-action="save-session">✅ Guardar entrenamiento</button>
+          <button class="btn secondary" data-action="new-draft">🆕 Nuevo borrador</button>
         </div>
         <p class="small muted">Se guarda en IndexedDB del móvil y también se deja espejo técnico en localStorage. Exporta backup de vez en cuando.</p>
       </section>
@@ -527,7 +527,7 @@
           ${ex.sets.map((set, sIdx) => renderSetDraft(set, idx, sIdx)).join('')}
         </div>
         <div class="row wrap">
-          <button class="btn secondary small-btn" data-action="add-set" data-index="${idx}">+ Serie</button>
+          <button class="btn secondary small-btn" data-action="add-set" data-index="${idx}">➕ Serie</button>
           <button class="btn ghost small-btn" data-action="start-rest" data-seconds="${ex.rest || state.settings.restSeconds}">Descanso ${ex.rest || state.settings.restSeconds}s</button>
         </div>
       </div>
@@ -705,7 +705,7 @@
     const totals = mealTotals(date);
     return `
       <section class="card">
-        <p class="eyebrow">Dieta</p>
+        <p class="eyebrow">🍽️ Dieta</p>
         <h2>Comidas y macros</h2>
         <div class="grid two">
           <div class="kpi"><strong>${fmt(totals.protein)} g</strong><span>Proteína</span></div>
@@ -716,7 +716,7 @@
       </section>
 
       <section class="card">
-        <h3>Añadir comida</h3>
+        <h3>➕ Añadir comida</h3>
         <div class="grid two">
           <label>Nombre<input class="input" id="mealName" placeholder="Ej. Pasta + pavo"></label>
           <label>Fecha<input class="input" id="mealDate" type="date" value="${date}"></label>
@@ -727,13 +727,13 @@
         </div>
         <label style="margin-top:10px">Notas<input class="input" id="mealNotes" placeholder="Opcional"></label>
         <div class="row wrap" style="margin-top:10px">
-          <button class="btn success" data-action="add-meal">Guardar comida</button>
-          <button class="btn secondary" data-action="add-meal-quick">Guardar y hacer rápida</button>
+          <button class="btn success" data-action="add-meal">✅ Guardar comida</button>
+          <button class="btn secondary" data-action="add-meal-quick">⭐ Guardar y hacer rápida</button>
         </div>
       </section>
 
       <section class="card">
-        <h3>Comidas rápidas</h3>
+        <h3>⚡ Comidas rápidas</h3>
         <div class="list">
           ${state.quickMeals.map(q => `
             <div class="list-item">
@@ -747,7 +747,7 @@
       </section>
 
       <section class="card">
-        <h3>Comidas de hoy</h3>
+        <h3>🍽️ Comidas de hoy</h3>
         ${renderMealList(date)}
       </section>
     `;
@@ -842,7 +842,7 @@
     const prList = computePRs().slice(0, 8);
     return `
       <section class="card">
-        <p class="eyebrow">Progreso</p>
+        <p class="eyebrow">📈 Progreso</p>
         <h2>Resumen</h2>
         <div class="grid two">
           <div class="kpi"><strong>${state.sessions.length}</strong><span>Entrenos totales</span></div>
@@ -853,17 +853,17 @@
       </section>
 
       <section class="card">
-        <h3>Peso corporal</h3>
+        <h3>⚖️ Peso corporal</h3>
         ${renderSimpleChart(recentWeights.map(w => ({ label: w.date.slice(5), value: w.weight })))}
       </section>
 
       <section class="card">
-        <h3>PRs por ejercicio</h3>
+        <h3>🏆 PRs por ejercicio</h3>
         ${prList.length ? `<div class="list">${prList.map(pr => `<div class="list-item"><strong>${escapeHtml(pr.name)}</strong><div class="small muted">${fmt(pr.weight, 1)} kg x ${fmt(pr.reps)} reps · ${escapeHtml(pr.date)}</div></div>`).join('')}</div>` : '<p class="muted">Aún no hay PRs.</p>'}
       </section>
 
       <section class="card">
-        <h3>Últimos entrenamientos</h3>
+        <h3>📓 Últimos entrenamientos</h3>
         ${recentSessions.length ? `<div class="list">${recentSessions.map(s => `<div class="list-item"><strong>${escapeHtml(s.title || s.routineKey || 'Entreno')}</strong><div class="small muted">${escapeHtml(s.date)} · ${s.exercises.length} ejercicios</div><button class="btn ghost small-btn" data-action="delete-session" data-id="${s.id}">Borrar</button></div>`).join('')}</div>` : '<p class="muted">Aún no hay entrenamientos guardados.</p>'}
       </section>
     `;
@@ -925,7 +925,7 @@
     const days = daysBack(35);
     return `
       <section class="card">
-        <p class="eyebrow">Calendario</p>
+        <p class="eyebrow">🗓️ Calendario</p>
         <h2>Últimos 35 días</h2>
         <div class="calendar">
           ${days.map(d => {
@@ -946,7 +946,7 @@
   function renderPlan() {
     return `
       <section class="card">
-        <p class="eyebrow">Plan</p>
+        <p class="eyebrow">📋 Plan</p>
         <h2>Rutinas base</h2>
         <p class="muted">Puedes editar la rutina base aquí. Los cambios afectan a nuevos borradores, no a sesiones ya guardadas.</p>
       </section>
@@ -975,7 +975,7 @@
         </section>
       `).join('')}
       <section class="card">
-        <h3>Semana orientativa</h3>
+        <h3>🗓️ Semana orientativa</h3>
         <div class="list">
           ${state.weeklyPlan.map(d => `<div class="list-item"><strong>${escapeHtml(d.day)}:</strong> ${escapeHtml(d.plan)}<div class="small muted">${escapeHtml(d.note)}</div></div>`).join('')}
         </div>
@@ -1023,7 +1023,7 @@
     const bytesText = navigator.storage && navigator.storage.estimate ? 'Calculando...' : 'No disponible';
     return `
       <section class="card">
-        <p class="eyebrow">Datos</p>
+        <p class="eyebrow">💾 Datos</p>
         <h2>Backups y limpieza</h2>
         <div class="grid two">
           <div class="kpi"><strong>V${APP_VERSION}</strong><span>Versión app</span></div>
@@ -1035,18 +1035,18 @@
       </section>
 
       <section class="card">
-        <h3>Backup</h3>
+        <h3>🧯 Backup</h3>
         <div class="stack">
-          <button class="btn success" data-action="export-json">Exportar backup completo JSON</button>
-          <button class="btn secondary" data-action="export-csv">Exportar CSV entrenos + dieta</button>
-          <button class="btn secondary" data-action="import-json">Importar backup JSON</button>
+          <button class="btn success" data-action="export-json">💾 Exportar backup completo JSON</button>
+          <button class="btn secondary" data-action="export-csv">📊 Exportar CSV entrenos + dieta</button>
+          <button class="btn secondary" data-action="import-json">📥 Importar backup JSON</button>
           <input class="file-input" id="importFile" type="file" accept="application/json,.json">
         </div>
         <p class="small muted">Antes de borrar datos o cambiar de URL, exporta un JSON. Ese archivo permite restaurar todo.</p>
       </section>
 
       <section class="card warning">
-        <h3>Limpiar memoria</h3>
+        <h3>🧹 Limpiar memoria</h3>
         <p class="muted">Borra categorías concretas sin tocar el resto. Para confirmar escribe <strong>BORRAR</strong>.</p>
         <label>Confirmación<input class="input" id="deleteConfirm" placeholder="BORRAR"></label>
         <div class="grid two" style="margin-top:10px">
@@ -1058,17 +1058,17 @@
       </section>
 
       <section class="card danger">
-        <h3>Borrado total</h3>
+        <h3>🗑️ Borrado total</h3>
         <p class="muted">Esto deja la app como nueva en este móvil. No borra la app publicada en GitHub, solo tus datos locales.</p>
         <label>Confirmación fuerte<input class="input" id="deleteAllConfirm" placeholder="BORRAR TODO"></label>
         <button class="btn danger" style="margin-top:10px" data-action="delete-all">Borrar TODO</button>
       </section>
 
       <section class="card">
-        <h3>App offline</h3>
+        <h3>📲 App offline</h3>
         <div class="stack">
-          <button class="btn secondary" data-action="update-app">Buscar actualización</button>
-          <button class="btn ghost" data-action="clear-cache">Limpiar caché offline</button>
+          <button class="btn secondary" data-action="update-app">🔄 Buscar actualización</button>
+          <button class="btn ghost" data-action="clear-cache">🧽 Limpiar caché offline</button>
         </div>
         <p class="small muted">Si limpias caché, la app seguirá teniendo tus datos. Solo fuerza a recargar archivos actualizados de la web.</p>
       </section>
