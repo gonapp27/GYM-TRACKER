@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Gym V5" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Gonzalo Gym Tracker V5</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Gonzalo Gym Tracker</p>
+        <h1>V5 Local-first</h1>
+      </div>
+      <div class="status-pill" id="onlineStatus">...</div>
+    </header>
+
+    <main>
+      <section id="view" class="view" aria-live="polite"></section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Navegación principal">
+      <button data-tab="today" class="active">Hoy</button>
+      <button data-tab="gym">Gym</button>
+      <button data-tab="diet">Dieta</button>
+      <button data-tab="progress">Progreso</button>
+      <button data-tab="plan">Plan</button>
+      <button data-tab="data">Datos</button>
+    </nav>
+  </div>
+
+  <template id="toastTemplate"><div class="toast"></div></template>
+  <script src="./app.js" defer></script>
+</body>
+</html>

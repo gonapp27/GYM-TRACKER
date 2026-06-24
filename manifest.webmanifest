@@ -1,0 +1,15 @@
+{
+  "name": "Gonzalo Gym Tracker V5",
+  "short_name": "Gym V5",
+  "description": "Rutina de gimnasio, dieta, progreso y backups locales para Gonzalo.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
