@@ -1,13 +1,15 @@
-# Gonzalo Gym Tracker V5.1 Visual
+# Gonzalo Gym Tracker V5.2 Visual
 
 PWA local-first para gimnasio, dieta y progreso.
 
-- Datos locales en IndexedDB.
-- Espejo técnico en localStorage.
-- Offline-first con service worker.
-- Exportar/importar backup JSON.
-- Exportar CSV.
-- Borrado parcial y total desde la app.
-- Interfaz V5.1 visual con colores, emojis y caché actualizada.
+Novedades V5.2:
+- Calendario mensual visual en Progreso: gym, tenis/deporte, alternativa, descanso o fallo.
+- Barras de progreso para kcal, proteína, carbohidratos y grasa.
+- Objetivos diarios editables desde Dieta.
+- Selector kg/lb en Gym para entrenar en España o USA.
+- Explicación de RIR en los ejercicios.
+- Temporizador con Start/Pausar y Reset.
+- Arreglo del campo de fecha/selector en móvil.
+- Service worker network-first para que las actualizaciones de GitHub Pages entren mejor.
 
-Para actualizar desde V5, sube estos archivos reemplazando los anteriores en GitHub Pages. Los datos del móvil se conservan porque la base de datos local mantiene el mismo nombre.
+Mantiene el mismo nombre de base de datos local que V5/V5.1, así que tus datos del móvil se conservan al reemplazar archivos.

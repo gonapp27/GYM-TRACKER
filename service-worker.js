@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gonzalo-gym-tracker-v5.1.0-visual';
+const CACHE_NAME = 'gonzalo-gym-tracker-v5.2.0-visual';
 const APP_SHELL = [
   './',
   './index.html',
@@ -30,10 +30,16 @@ self.addEventListener('fetch', event => {
   if (req.method !== 'GET') return;
 
   if (req.mode === 'navigate') {
-    // Cache-first navigation: if the app shell was opened once, it still loads even
-    // if the hosting URL is temporarily broken or the phone has bad coverage.
+    // Network-first when online so GitHub Pages updates are picked up faster,
+    // with cached app shell as fallback for the gym/offline use case.
     event.respondWith(
-      caches.match('./index.html').then(cached => cached || fetch(req).catch(() => caches.match('./index.html')))
+      fetch(req)
+        .then(networkRes => {
+          const copy = networkRes.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put('./index.html', copy));
+          return networkRes;
+        })
+        .catch(() => caches.match('./index.html'))
     );
     return;
   }

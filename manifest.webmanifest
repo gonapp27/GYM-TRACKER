@@ -1,6 +1,6 @@
 {
-  "name": "Gonzalo Gym Tracker V5.1",
-  "short_name": "Gym V5.1",
+  "name": "Gonzalo Gym Tracker V5.2",
+  "short_name": "Gym V5.2",
   "description": "Rutina de gimnasio, dieta, progreso y backups locales para Gonzalo.",
   "start_url": "./index.html",
   "scope": "./",

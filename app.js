@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const APP_VERSION = '5.1.0';
+  const APP_VERSION = '5.2.0';
   const DB_NAME = 'gonzaloGymTrackerV5DB';
   const STORE = 'kv';
   const STATE_KEY = 'state';
@@ -293,6 +293,113 @@
     }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
   }
 
+
+  function macroCard(label, value, goal, unit = '', emoji = '') {
+    const safeGoal = Math.max(0, num(goal, 0));
+    const pct = safeGoal ? clamp((num(value) / safeGoal) * 100, 0, 140) : 0;
+    const barPct = clamp(pct, 0, 100);
+    const status = safeGoal ? `${fmt(value)}${unit} / ${fmt(safeGoal)}${unit}` : `${fmt(value)}${unit}`;
+    return `<div class="kpi macro-kpi">
+      <div class="row between"><strong>${emoji} ${fmt(value)}${unit}</strong><span class="macro-pct">${fmt(pct)}%</span></div>
+      <span>${escapeHtml(label)} · ${status}</span>
+      <div class="progress-bar macro-bar ${pct >= 100 ? 'complete' : ''}"><span style="width:${barPct}%"></span></div>
+    </div>`;
+  }
+
+  function monthDays(date = new Date()) {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const days = [];
+    const first = new Date(year, month, 1, 12);
+    const last = new Date(year, month + 1, 0, 12);
+    for (let d = new Date(first); d <= last; d.setDate(d.getDate() + 1)) days.push(d.toISOString().slice(0, 10));
+    const firstMondayBased = (first.getDay() + 6) % 7;
+    return { year, month, days, leadingBlanks: firstMondayBased };
+  }
+
+  function activityStatusForDate(date) {
+    const sessions = getSessionsFor(date);
+    const check = state.checkins.find(c => c.date === date);
+    if (sessions.length) return 'gym';
+    if (check?.activityStatus) return check.activityStatus;
+    if (check?.gymDone) return 'gym';
+    if (check?.cardioDone) return 'sport';
+    return 'none';
+  }
+
+  function activityMeta(status) {
+    const map = {
+      none: { icon: '·', label: 'Sin marcar', cls: 'none' },
+      gym: { icon: '🏋️', label: 'Gym', cls: 'gym' },
+      sport: { icon: '🎾', label: 'Tenis/deporte', cls: 'sport' },
+      other: { icon: '🚶', label: 'Alternativa', cls: 'other' },
+      rest: { icon: '😴', label: 'Descanso', cls: 'rest' },
+      missed: { icon: '❌', label: 'Fallado', cls: 'missed' }
+    };
+    return map[status] || map.none;
+  }
+
+  async function cycleActivityStatus(date) {
+    const order = ['none', 'gym', 'sport', 'other', 'rest', 'missed'];
+    const current = activityStatusForDate(date);
+    const next = order[(order.indexOf(current) + 1) % order.length] || 'none';
+    const check = getCheckin(date);
+    check.activityStatus = next === 'none' ? '' : next;
+    check.gymDone = next === 'gym';
+    check.cardioDone = next === 'sport' || next === 'other';
+    await saveState('activity-status');
+    toast(`${date.slice(8)}/${date.slice(5,7)} marcado: ${activityMeta(next).label}`);
+    render();
+  }
+
+  function renderMonthlyCompliance() {
+    const { year, month, days, leadingBlanks } = monthDays(new Date());
+    const monthLabel = new Date(year, month, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+    const stats = days.reduce((acc, d) => {
+      const st = activityStatusForDate(d);
+      if (['gym', 'sport', 'other'].includes(st)) acc.done += 1;
+      if (st === 'missed') acc.missed += 1;
+      if (st === 'rest') acc.rest += 1;
+      return acc;
+    }, { done: 0, missed: 0, rest: 0 });
+    return `<section class="card">
+      <div class="row between">
+        <div>
+          <h3>🗓️ Control mensual</h3>
+          <p class="small muted">${escapeHtml(monthLabel)} · toca un día para cambiar: vacío → gym → tenis/deporte → alternativa → descanso → fallo.</p>
+        </div>
+      </div>
+      <div class="grid three mini-stats">
+        <div class="kpi"><strong>${stats.done}</strong><span>Días cumplidos/deporte</span></div>
+        <div class="kpi"><strong>${stats.missed}</strong><span>Días fallados</span></div>
+        <div class="kpi"><strong>${stats.rest}</strong><span>Descansos marcados</span></div>
+      </div>
+      <div class="month-weekdays"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+      <div class="month-calendar">
+        ${Array.from({ length: leadingBlanks }).map(() => '<div class="month-day blank"></div>').join('')}
+        ${days.map(d => {
+          const meta = activityMeta(activityStatusForDate(d));
+          const isToday = d === todayISO();
+          const totals = mealTotals(d);
+          const proteinOk = totals.protein >= num(state.settings.proteinGoal, 999999);
+          return `<button class="month-day ${meta.cls} ${isToday ? 'today' : ''}" data-action="cycle-day-status" data-date="${d}" title="${escapeHtml(meta.label)}">
+            <span class="day-num">${Number(d.slice(8))}</span>
+            <span class="day-icon">${meta.icon}</span>
+            ${proteinOk ? '<span class="protein-dot" title="Proteína cumplida"></span>' : ''}
+          </button>`;
+        }).join('')}
+      </div>
+      <div class="legend">
+        <span><b class="legend-dot gym"></b>Gym</span>
+        <span><b class="legend-dot sport"></b>Tenis/deporte</span>
+        <span><b class="legend-dot other"></b>Alternativa</span>
+        <span><b class="legend-dot rest"></b>Descanso</span>
+        <span><b class="legend-dot missed"></b>Fallado</span>
+        <span><b class="protein-dot inline"></b>Proteína OK</span>
+      </div>
+    </section>`;
+  }
+
   function render() {
     if (!state) return;
     if (timerInterval && currentTab !== 'gym') stopTimer(false);
@@ -414,6 +521,8 @@
     $$('[data-check]').forEach(input => input.addEventListener('change', async () => {
       const check = getCheckin(todayISO());
       check[input.dataset.check] = input.checked;
+      if (input.dataset.check === 'gymDone' && input.checked) check.activityStatus = 'gym';
+      if (input.dataset.check === 'cardioDone' && input.checked && check.activityStatus !== 'gym') check.activityStatus = 'sport';
       await saveState('checkin');
     }));
     $('#checkNotes').addEventListener('input', debounce(async (e) => {
@@ -439,6 +548,7 @@
       title: `${key} · ${routine.name}`,
       startedAt: nowISO(),
       notes: '',
+      units: state.settings.units || 'kg',
       exercises: routine.exercises.map(ex => ({
         name: ex.name,
         target: ex.target,
@@ -457,6 +567,8 @@
 
   function renderGym() {
     if (!currentGymDraft) currentGymDraft = newDraftFromRoutine('A');
+    if (!currentGymDraft.units) currentGymDraft.units = state.settings.units || 'kg';
+    const unit = currentGymDraft.units || state.settings.units || 'kg';
     const routineOptions = Object.entries(state.routine).map(([key, r]) => `<option value="${key}" ${currentGymDraft.routineKey === key ? 'selected' : ''}>${key} · ${escapeHtml(r.name)}</option>`).join('');
     return `
       <section class="card">
@@ -467,11 +579,17 @@
           </div>
           <button class="btn secondary small-btn" data-action="copy-last">📋 Copiar última</button>
         </div>
-        <div class="grid two">
+        <div class="session-grid">
           <label>Rutina<select id="routineSelect">${routineOptions}</select></label>
           <label>Fecha<input class="input" id="sessionDate" type="date" value="${currentGymDraft.date}"></label>
+          <label>Unidad peso<select id="sessionUnits"><option value="kg" ${unit === 'kg' ? 'selected' : ''}>kg · España</option><option value="lb" ${unit === 'lb' ? 'selected' : ''}>lb · USA</option></select></label>
         </div>
         <label style="margin-top:10px">Notas de sesión<textarea id="sessionNotes" placeholder="Energía, agujetas, tenis después...">${escapeHtml(currentGymDraft.notes || '')}</textarea></label>
+      </section>
+
+      <section class="card info-box">
+        <h3>ℹ️ Cómo rellenar las series</h3>
+        <p class="small muted"><strong>Peso</strong>: usa la unidad elegida arriba (${unit}). <strong>RIR</strong> = reps en reserva. Ejemplo: RIR 2 significa que acabaste la serie pudiendo hacer unas 2 repeticiones más. Si no quieres usarlo, déjalo vacío.</p>
       </section>
 
       <section class="card">
@@ -483,7 +601,8 @@
             <button class="btn secondary small-btn" data-timer="90">90s</button>
             <button class="btn secondary small-btn" data-timer="120">120s</button>
             <button class="btn ghost small-btn" data-action="timer-plus">+30s</button>
-            <button class="btn danger small-btn" data-action="timer-stop">Stop</button>
+            <button class="btn ${timerInterval ? 'warning' : 'success'} small-btn" id="timerToggle" data-action="timer-toggle">${timerInterval ? '⏸️ Pausar' : '▶️ Start'}</button>
+            <button class="btn danger small-btn" data-action="timer-reset">↺ Reset</button>
           </div>
         </div>
       </section>
@@ -524,7 +643,7 @@
           <label>Descanso s<input class="input" inputmode="numeric" data-ex-field="rest" value="${escapeHtml(ex.rest || state.settings.restSeconds)}"></label>
         </div>
         <div class="set-list" style="margin-top:10px">
-          ${ex.sets.map((set, sIdx) => renderSetDraft(set, idx, sIdx)).join('')}
+          ${ex.sets.map((set, sIdx) => renderSetDraft(set, idx, sIdx, currentGymDraft.units || state.settings.units || 'kg')).join('')}
         </div>
         <div class="row wrap">
           <button class="btn secondary small-btn" data-action="add-set" data-index="${idx}">➕ Serie</button>
@@ -534,13 +653,13 @@
     `;
   }
 
-  function renderSetDraft(set, exIdx, setIdx) {
+  function renderSetDraft(set, exIdx, setIdx, unit = 'kg') {
     return `
       <div class="set-row" data-set-index="${setIdx}">
         <div class="set-no">${setIdx + 1}</div>
-        <label>kg<input class="input" inputmode="decimal" data-set-field="weight" value="${escapeHtml(set.weight)}"></label>
-        <label>reps<input class="input" inputmode="numeric" data-set-field="reps" value="${escapeHtml(set.reps)}"></label>
-        <label>RIR<input class="input" inputmode="numeric" data-set-field="rir" value="${escapeHtml(set.rir)}"></label>
+        <label>Peso (${escapeHtml(unit)})<input class="input" inputmode="decimal" data-set-field="weight" value="${escapeHtml(set.weight)}" placeholder="0"></label>
+        <label>Reps<input class="input" inputmode="numeric" data-set-field="reps" value="${escapeHtml(set.reps)}" placeholder="10"></label>
+        <label>RIR <span class="label-help">?</span><input class="input" inputmode="numeric" data-set-field="rir" value="${escapeHtml(set.rir)}" placeholder="0-3"></label>
         <button class="remove-set" data-action="remove-set" data-ex-index="${exIdx}" data-set-index="${setIdx}">×</button>
       </div>
     `;
@@ -553,6 +672,12 @@
       render();
     });
     $('#sessionDate').addEventListener('change', e => currentGymDraft.date = e.target.value || todayISO());
+    $('#sessionUnits').addEventListener('change', async e => {
+      currentGymDraft.units = e.target.value === 'lb' ? 'lb' : 'kg';
+      state.settings.units = currentGymDraft.units;
+      await saveState('change-units');
+      render();
+    });
     $('#sessionNotes').addEventListener('input', e => currentGymDraft.notes = e.target.value);
 
     $('#exerciseList').addEventListener('input', e => {
@@ -593,8 +718,9 @@
       }
       if (action === 'start-rest') startTimer(Number(btn.dataset.seconds) || state.settings.restSeconds);
       if (btn.dataset.timer) startTimer(Number(btn.dataset.timer));
-      if (action === 'timer-plus') startTimer((timerRemaining || state.settings.restSeconds) + 30);
-      if (action === 'timer-stop') stopTimer(true);
+      if (action === 'timer-plus') addTimerSeconds(30);
+      if (action === 'timer-toggle') toggleTimer();
+      if (action === 'timer-reset') resetTimer(true);
       if (action === 'new-draft') {
         currentGymDraft = newDraftFromRoutine(currentGymDraft.routineKey || 'A');
         render();
@@ -607,6 +733,7 @@
   function normalizeDraftBeforeSave() {
     currentGymDraft.notes = $('#sessionNotes')?.value || currentGymDraft.notes || '';
     currentGymDraft.date = $('#sessionDate')?.value || currentGymDraft.date || todayISO();
+    currentGymDraft.units = $('#sessionUnits')?.value || currentGymDraft.units || state.settings.units || 'kg';
     $$('#exerciseList .exercise').forEach(exEl => {
       const exIdx = Number(exEl.dataset.exerciseIndex);
       const ex = currentGymDraft.exercises[exIdx];
@@ -638,8 +765,11 @@
       }))
       .filter(ex => ex.name.trim() && ex.sets.length);
     if (!session.exercises.length) return toast('No hay series con datos para guardar.');
+    session.units = session.units || state.settings.units || 'kg';
     state.sessions.push(session);
-    getCheckin(session.date).gymDone = true;
+    const sessionCheck = getCheckin(session.date);
+    sessionCheck.gymDone = true;
+    sessionCheck.activityStatus = 'gym';
     await saveState('save-session');
     currentGymDraft = newDraftFromRoutine(session.routineKey || 'A');
     toast('Entrenamiento guardado.');
@@ -655,6 +785,7 @@
     currentGymDraft.date = todayISO();
     currentGymDraft.startedAt = nowISO();
     currentGymDraft.notes = '';
+    currentGymDraft.units = currentGymDraft.units || state.settings.units || 'kg';
     currentGymDraft.exercises = currentGymDraft.exercises.map(ex => ({
       ...ex,
       sets: ex.sets.map(set => ({ weight: set.weight ?? '', reps: set.reps ?? '', rir: set.rir ?? '' }))
@@ -671,29 +802,62 @@
   }
 
   function startTimer(seconds) {
-    stopTimer(false);
-    timerRemaining = Math.max(0, Number(seconds || state.settings.restSeconds));
+    if (timerInterval) clearInterval(timerInterval);
+    if (seconds !== undefined && seconds !== null) timerRemaining = Math.max(0, Number(seconds || state.settings.restSeconds));
+    if (!timerRemaining) timerRemaining = Number(state.settings.restSeconds || 90);
     updateTimerDisplay();
     timerInterval = setInterval(() => {
       timerRemaining -= 1;
       updateTimerDisplay();
       if (timerRemaining <= 0) {
         stopTimer(false);
+        timerRemaining = 0;
+        updateTimerDisplay();
         vibrate();
         toast('Descanso terminado.');
       }
     }, 1000);
+    updateTimerControls();
   }
 
   function stopTimer(showToast) {
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = null;
-    if (showToast) toast('Timer parado.');
+    updateTimerControls();
+    if (showToast) toast('Timer pausado.');
+  }
+
+  function toggleTimer() {
+    if (timerInterval) return stopTimer(true);
+    startTimer(timerRemaining || state.settings.restSeconds);
+  }
+
+  function resetTimer(showToast = false) {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = null;
+    timerRemaining = Number(state.settings.restSeconds || 90);
+    updateTimerDisplay();
+    updateTimerControls();
+    if (showToast) toast('Timer reseteado.');
+  }
+
+  function addTimerSeconds(seconds) {
+    timerRemaining = Math.max(0, (timerRemaining || state.settings.restSeconds || 90) + Number(seconds || 0));
+    updateTimerDisplay();
+    updateTimerControls();
   }
 
   function updateTimerDisplay() {
     const el = $('#timerDisplay');
-    if (el) el.textContent = formatTimer(timerRemaining);
+    if (el) el.textContent = formatTimer(timerRemaining || state.settings.restSeconds);
+    updateTimerControls();
+  }
+
+  function updateTimerControls() {
+    const btn = $('#timerToggle');
+    if (!btn) return;
+    btn.textContent = timerInterval ? '⏸️ Pausar' : '▶️ Start';
+    btn.className = `btn ${timerInterval ? 'warning' : 'success'} small-btn`;
   }
 
   function vibrate() {
@@ -707,11 +871,21 @@
       <section class="card">
         <p class="eyebrow">🍽️ Dieta</p>
         <h2>Comidas y macros</h2>
-        <div class="grid two">
-          <div class="kpi"><strong>${fmt(totals.protein)} g</strong><span>Proteína</span></div>
-          <div class="kpi"><strong>${fmt(totals.kcal)}</strong><span>Kcal</span></div>
-          <div class="kpi"><strong>${fmt(totals.carbs)} g</strong><span>Carbs</span></div>
-          <div class="kpi"><strong>${fmt(totals.fat)} g</strong><span>Grasa</span></div>
+        <div class="grid two macro-grid">
+          ${macroCard('Proteína', totals.protein, state.settings.proteinGoal, ' g', '🥩')}
+          ${macroCard('Calorías', totals.kcal, state.settings.kcalGoal, '', '🔥')}
+          ${macroCard('Carbohidratos', totals.carbs, state.settings.carbsGoal, ' g', '🍚')}
+          ${macroCard('Grasas', totals.fat, state.settings.fatGoal, ' g', '🥑')}
+        </div>
+      </section>
+
+      <section class="card compact">
+        <h3>🎯 Objetivos diarios</h3>
+        <div class="grid four goals-grid">
+          <label>Kcal<input class="input" inputmode="numeric" data-goal="kcalGoal" value="${escapeHtml(state.settings.kcalGoal)}"></label>
+          <label>Proteína g<input class="input" inputmode="numeric" data-goal="proteinGoal" value="${escapeHtml(state.settings.proteinGoal)}"></label>
+          <label>Carbs g<input class="input" inputmode="numeric" data-goal="carbsGoal" value="${escapeHtml(state.settings.carbsGoal)}"></label>
+          <label>Grasa g<input class="input" inputmode="numeric" data-goal="fatGoal" value="${escapeHtml(state.settings.fatGoal)}"></label>
         </div>
       </section>
 
@@ -771,6 +945,11 @@
   }
 
   function bindDiet() {
+    view.oninput = debounce(async e => {
+      if (!e.target.dataset.goal) return;
+      state.settings[e.target.dataset.goal] = num(e.target.value, state.settings[e.target.dataset.goal]);
+      await saveState('edit-macro-goals');
+    }, 350);
     view.onclick = async e => {
       const btn = e.target.closest('button');
       if (!btn) return;
@@ -852,6 +1031,8 @@
         </div>
       </section>
 
+      ${renderMonthlyCompliance()}
+
       <section class="card">
         <h3>⚖️ Peso corporal</h3>
         ${renderSimpleChart(recentWeights.map(w => ({ label: w.date.slice(5), value: w.weight })))}
@@ -859,7 +1040,7 @@
 
       <section class="card">
         <h3>🏆 PRs por ejercicio</h3>
-        ${prList.length ? `<div class="list">${prList.map(pr => `<div class="list-item"><strong>${escapeHtml(pr.name)}</strong><div class="small muted">${fmt(pr.weight, 1)} kg x ${fmt(pr.reps)} reps · ${escapeHtml(pr.date)}</div></div>`).join('')}</div>` : '<p class="muted">Aún no hay PRs.</p>'}
+        ${prList.length ? `<div class="list">${prList.map(pr => `<div class="list-item"><strong>${escapeHtml(pr.name)}</strong><div class="small muted">${fmt(pr.weight, 1)} ${escapeHtml(pr.unit || 'kg')} x ${fmt(pr.reps)} reps${pr.unit === 'lb' ? ' · ' + fmt(pr.weightKg, 1) + ' kg eq.' : ''} · ${escapeHtml(pr.date)}</div></div>`).join('')}</div>` : '<p class="muted">Aún no hay PRs.</p>'}
       </section>
 
       <section class="card">
@@ -871,33 +1052,41 @@
 
   function bindProgress() {
     view.onclick = async e => {
-      const btn = e.target.closest('[data-action="delete-session"]');
+      const btn = e.target.closest('button');
       if (!btn) return;
-      if (!confirm('¿Borrar este entrenamiento?')) return;
-      state.sessions = state.sessions.filter(s => s.id !== btn.dataset.id);
-      await saveState('delete-session');
-      toast('Entrenamiento borrado.');
-      render();
+      if (btn.dataset.action === 'cycle-day-status') {
+        await cycleActivityStatus(btn.dataset.date);
+        return;
+      }
+      if (btn.dataset.action === 'delete-session') {
+        if (!confirm('¿Borrar este entrenamiento?')) return;
+        state.sessions = state.sessions.filter(s => s.id !== btn.dataset.id);
+        await saveState('delete-session');
+        toast('Entrenamiento borrado.');
+        render();
+      }
     };
   }
 
   function computePRs() {
     const map = new Map();
     for (const s of state.sessions) {
+      const unit = s.units || s.unit || state.settings.units || 'kg';
       for (const ex of s.exercises || []) {
         for (const set of ex.sets || []) {
           const weight = num(set.weight, 0);
           const reps = num(set.reps, 0);
           if (!weight || !reps) continue;
+          const weightKg = unit === 'lb' ? weight * 0.45359237 : weight;
           const key = ex.name.trim().toLowerCase();
           const prev = map.get(key);
-          if (!prev || weight > prev.weight || (weight === prev.weight && reps > prev.reps)) {
-            map.set(key, { name: ex.name, weight, reps, date: s.date });
+          if (!prev || weightKg > prev.weightKg || (weightKg === prev.weightKg && reps > prev.reps)) {
+            map.set(key, { name: ex.name, weight, weightKg, unit, reps, date: s.date });
           }
         }
       }
     }
-    return [...map.values()].sort((a, b) => b.weight - a.weight);
+    return [...map.values()].sort((a, b) => b.weightKg - a.weightKg);
   }
 
   function renderSimpleChart(points) {
@@ -1130,19 +1319,19 @@
 
   function exportCsv() {
     const rows = [];
-    rows.push(['tipo', 'fecha', 'titulo_nombre', 'ejercicio', 'serie', 'kg', 'reps', 'rir', 'kcal', 'proteina', 'carbs', 'grasa', 'notas'].join(';'));
+    rows.push(['tipo', 'fecha', 'titulo_nombre', 'ejercicio', 'serie', 'peso', 'unidad', 'reps', 'rir', 'kcal', 'proteina', 'carbs', 'grasa', 'notas'].join(';'));
     for (const s of state.sessions) {
       for (const ex of s.exercises || []) {
         (ex.sets || []).forEach((set, idx) => rows.push([
-          'gym', s.date, s.title || s.routineKey || '', ex.name, idx + 1, set.weight, set.reps, set.rir, '', '', '', '', s.notes || ex.notes || ''
+          'gym', s.date, s.title || s.routineKey || '', ex.name, idx + 1, set.weight, s.units || state.settings.units || 'kg', set.reps, set.rir, '', '', '', '', s.notes || ex.notes || ''
         ].map(csvEscape).join(';')));
       }
     }
     for (const m of state.meals) {
-      rows.push(['dieta', m.date, m.name, '', '', '', '', '', m.kcal, m.protein, m.carbs, m.fat, m.notes || ''].map(csvEscape).join(';'));
+      rows.push(['dieta', m.date, m.name, '', '', '', '', '', '', m.kcal, m.protein, m.carbs, m.fat, m.notes || ''].map(csvEscape).join(';'));
     }
     for (const w of state.bodyWeights) {
-      rows.push(['peso', w.date, 'Peso corporal', '', '', w.weight, '', '', '', '', '', '', w.notes || ''].map(csvEscape).join(';'));
+      rows.push(['peso', w.date, 'Peso corporal', '', '', w.weight, state.settings.units || 'kg', '', '', '', '', '', '', w.notes || ''].map(csvEscape).join(';'));
     }
     downloadFile(`gonzalo-gym-tracker-v5-${downloadNameDate()}.csv`, rows.join('\n'), 'text/csv;charset=utf-8');
     toast('CSV exportado.');
